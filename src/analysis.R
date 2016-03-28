@@ -6,7 +6,6 @@ Sys.setlocale("LC_TIME", "es_ES.UTF-8")
 
 library(RMySQL)
 library(scales)
-library(ggplot2)
 library(dplyr)
 library(reshape2)
 library(tm)
@@ -16,8 +15,6 @@ library(splines)
 
 quartzFonts(avenir = c("Avenir Book", "Avenir Black",
                        "Avenir Book Oblique", "Avenir Black Oblique"))
-
-theme_set(theme_bw())
 
 ## Data loading
 mydb <- dbConnect(MySQL(),
@@ -118,7 +115,7 @@ tdm <- tm_map(tdm, stemDocument, language="spanish")
 adtm <- DocumentTermMatrix(tdm)
 adtm <- removeSparseTerms(adtm, 0.9) ## Not many options here!
 
-#### Hack my way aroud STM very opinionated input ####
+#### Hack my way aroud STM's very opinionated input ####
 make_metadata <- function(tdm, dtm, data) {
     for (i in 1:ncol(data)) {
         NLP::meta(tdm, colnames(data)[i]) <- data[, i]
@@ -142,14 +139,14 @@ predocs <- list(documents=slamout$documents,
 processed <- prepDocuments(predocs$documents, predocs$vocab, predocs$meta)
 
 ## Model with fixed number of topics
-## base_model <- stm(processed$documents,
-##                   processed$vocab,
-##                   K=12,
-##                   prevalence = ~ s(monthtime),
-##                   max.em.its=75,
-##                   data=processed$meta,
-##                   init.type="Spectral")
-## saveRDS(base_model, "../dta/base-model.RDS")
+base_model <- stm(processed$documents,
+                  processed$vocab,
+                  K=12,
+                  prevalence = ~ s(monthtime),
+                  max.em.its=75,
+                  data=processed$meta,
+                  init.type="Spectral")
+saveRDS(base_model, "../dta/base-model.RDS")
 
 base_model <- readRDS("../dta/base-model.RDS")
 
@@ -159,6 +156,11 @@ base_model <- readRDS("../dta/base-model.RDS")
 ##                    K=c(5, 7, 10, 12, 15, 25, 50),
 ##                    prevalence =~ s(monthtime),
 ##                    data=processed$meta)
+
+## This is me interpreting things
+temas <- c("Actualidad", "Economía", "Historia y libros", "Trenes", "Partidos políticos",
+           "Política americana", "Comunicación", "Integración europea", "Instituciones",
+           "Mercado laboral", "Comportamiento electoral", "Políticas públicas")
 
 source("cloud.R") ## Because the stm function sucks
 ## Plot all topics in a dotplot
@@ -175,23 +177,23 @@ for (i in 1:12) {
                      thresh=0.95,
                      type="model",
                      max.words=20)
-    mydata <- mycloud[order(mycloud$freq, decreasing=TRUE),][1:10, ]
+    mydata <- mycloud[order(mycloud$freq, decreasing=TRUE),][1:7, ]
     mydata$words <- factor(mydata$words, mydata$words)
     plot(x=mydata$freq, y=as.numeric(mydata$words),
          bty="n", yaxt="n", xaxt="n", ylab="", col="blue", xlab="",
          pch=19, cex=1.3)
-    abline(h=1:10, col="gray", lty=2, lwd=0.5)
-    axis(2, at=1:10, labels=as.character(mydata$words), las=1, cex.axis=1.5)
+    abline(h=1:7, col="gray", lty=2, lwd=0.5)
+    axis(2, at=1:7, labels=as.character(mydata$words), las=1, cex.axis=1.5)
     axis(1, cex.axis=1.5)	
     if (i %in% 10:12) {
-        title(sprintf("Tema %i", i), xlab="Frecuencia", cex.main=1.6, cex.lab=1.4)
+        title(temas[i], xlab="Frecuencia", cex.main=1.6, cex.lab=1.4)
     } else {
-        title(sprintf("Tema %i", i), cex.main=1.6, cex.lab=1.4)
+        title(temas[i], cex.main=1.6, cex.lab=1.4)
     }
 }
-mtext("Evolución de los temas", side = 3, line = 1, outer = TRUE, cex=1.7)
+mtext("Distribución de los temas", side = 3, line = 1, outer = TRUE, cex=1.7)
 mtext("Gonzalo Rivero | Politikon.es",
-      at=11000, side=1, padj=6, cex=1,
+      at=12200, side=1, padj=6, cex=1,
       col="gray40")
 par(op)
 dev.off()
@@ -215,7 +217,7 @@ for (i in 1:12) {
                         method = "continuous",
                         xlab = "",
                         linecol = "blue",
-                        ylim = c(0, .3),
+                        ylim = c(0, .2),
                         printlegend = FALSE,
                         bty="n",
                         lwd=3,
@@ -224,17 +226,17 @@ for (i in 1:12) {
                         panel.first = grid())    
     ## axis(side=1)
     if (i %in% 10:12) {
-        title(sprintf("Tema %i", i), xlab="Mes", ylab="", cex.main=1.5, cex.lab=1.4)
+        title(temas[i], xlab="Mes", ylab="", cex.main=1.5, cex.lab=1.4)
     }
     if (i %in% c(1, 4, 7, 10)) {
-        title(sprintf("Tema %i", i), xlab="", ylab="Prevalencia", cex.main=1.5, cex.lab=1.4)
+        title(temas[i], xlab="", ylab="Prevalencia", cex.main=1.5, cex.lab=1.4)
     }
     else {
-        title(sprintf("Tema %i", i), xlab="", ylab="", cex.main=1.5, cex.lab=1.4)
+        title(temas[i], xlab="", ylab="", cex.main=1.5, cex.lab=1.4)
     }
 }
 mtext("Gonzalo Rivero | Politikon.es",
-      at=40, side=1, padj=6.5, cex=0.9,
+      at=35, side=1, padj=6.5, cex=0.9,
       col="gray40")
 mtext("Evolución de los temas", side = 3, line = 1, outer = TRUE, cex=1.4)
 par(op)
